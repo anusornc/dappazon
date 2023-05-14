@@ -29,3 +29,12 @@ In a separate terminal execute:
 
 ### 6. Start frontend
 `$ npm run start`
+
+@startuml component
+actor client
+node app
+database db
+
+db -> app
+app -> client
+@enduml
