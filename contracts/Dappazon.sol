@@ -17,16 +17,27 @@ contract Dappazon {
         uint256 rating;
         uint256 stock;
     }
+    // Order struct
+    struct Order {
+        uint256 time;
+        Product product;
+        uint256 quantity;
+    }
 
     // mapping of product id to product
-    mapping(uint256 => Product) public products;
+    mapping(uint256 => Product) public products;    
+
+    // mapping of address to number of order placed
+    mapping(address => uint256) public orderCount; // number of orders
+
+    // mapping of address to array of orders
+    mapping(address => mapping(uint256 => Order)) public orders; // array of orders
 
     // events ListProduct
-    event ListProduct(
-        string name,
-        uint256 cost,
-        uint256 quantity
-    );
+    event ListProduct(string name, uint256 cost, uint256 quantity);
+
+    // events BuyProduct
+    event BuyProduct(string name, uint256 cost, uint256 quantity);
 
     // q: what is constructor?
     // a: constructor is a function that is called when the contract is created
@@ -52,7 +63,7 @@ contract Dappazon {
         uint256 _cost,
         uint256 _rating,
         uint256 _stock
-    ) public  {
+    ) public onlyOwner {
         // check if the product with the given id already exists
         require(
             products[_id].id != _id,
@@ -86,19 +97,34 @@ contract Dappazon {
         );
 
         // check if the product is in stock
-        require(
-            products[_id].stock >= _quantity,
-            "Product is out of stock"
-        );
+        require(products[_id].stock >= _quantity, "Product is out of stock");
 
         // check if the caller has enough ether to buy the product
         require(
             msg.sender.balance >= products[_id].cost * _quantity,
-           
             "Caller does not have enough ether to buy the product"
         );
 
+        // Fetch the product
+        Product memory product = products[_id];
+
+        // create a new order
+        Order memory newOrder = Order(block.timestamp, product , _quantity);
+
+        // add the order to the array of orders of the caller
+        orders[msg.sender][orderCount[msg.sender]] = newOrder;   
+
+        // increment the order count of the caller
+        orderCount[msg.sender]++;
+      
+        
         // reduce the stock of the product
         products[_id].stock -= _quantity;
+
+        // transfer the ether to the owner of the contract (seller) by order of the buyer
+        payable(owner).transfer(newOrder.product.cost * newOrder.quantity);
+
+        // emit the event BuyProduct
+        emit BuyProduct(newOrder.product.name, newOrder.product.cost, newOrder.quantity);       
     }
 }
